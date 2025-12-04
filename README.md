@@ -37,7 +37,7 @@ This listener includes the following HTTP filter chain:
 3. **Dynamic Module** (passthrough): Custom Go-based HTTP filter
 4. **Router**: Routes to backend
 
-**Behavior**: When receiving large POST requests, this port will **block and timeout** because the ext_authz filter needs to inspect the request headers before allowing the request to proceed. However, with the compressor filter placed before it, the request processing may be delayed waiting for the full request body, causing the 0.25s timeout to be exceeded.
+**Behavior**: When receiving large POST requests via **HTTP/2**, this port will **block and timeout** due to the interaction between the compressor filter and ext_authz filter. The 0.25s timeout is exceeded before the auth check completes. However, **HTTP/1.1 requests work normally** on this port.
 
 ### Port 1063 - Without External Authorization
 
@@ -63,8 +63,22 @@ curl --http2-prior-knowledge -X POST http://localhost:1063/post --data-binary '@
 
 ### Testing Port 1062 (Blocking Behavior)
 
-Send a 1MB file to port 1062:
+#### HTTP/2 Request (Blocks and Timeouts)
+
+Send a 1MB file to port 1062 using HTTP/2:
 
 ```bash
 curl --http2-prior-knowledge -X POST http://localhost:1062/post --data-binary '@testfile/1m'
 ```
+
+**Expected Result**: The request will **block and eventually timeout**. This issue is specific to HTTP/2 with the ext_authz filter configuration.
+
+#### HTTP/1.1 Request (Works Normally)
+
+Send a 1MB file to port 1062 using HTTP/1.1:
+
+```bash
+curl -X POST http://localhost:1062/post --data-binary '@testfile/1m'
+```
+
+**Expected Result**: The request completes **successfully** when using HTTP/1.1. The timeout issue only occurs with HTTP/2 protocol.
