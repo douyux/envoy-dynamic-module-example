@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  envoy:
+    build:
+      context: ../examples
+      dockerfile: Dockerfile
+    container_name: envoy-dynamic-module
+    ports:
+      - "1062:1062"
+      - "1063:1063"
+      - "9903:9903"
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "debug"]
+    depends_on:
+      - httpbin
+      - ext-auth-grpc
+    networks:
+      - envoy-net
+    restart: unless-stopped
+
+  httpbin:
+    image: kennethreitz/httpbin:latest
+    container_name: httpbin
+    ports:
+      - "8090:80"
+    networks:
+      - envoy-net
+    restart: unless-stopped
+
+  ext-auth-grpc:
+    build:
+      context: ../ext-auth
+      dockerfile: Dockerfile
+    container_name: ext-auth-grpc
+    ports:
+      - "50053:50051"
+    networks:
+      - envoy-net
+    restart: unless-stopped
+
+networks:
+  envoy-net:
+    driver: bridge
+
