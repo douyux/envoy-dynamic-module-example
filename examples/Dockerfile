@@ -20,11 +20,6 @@ RUN ARCH=$(uname -m) && \
 
 WORKDIR /build
 
-RUN go env -w GOPROXY=https://athens.qingteng.cn,https://goproxy.cn,direct && \
-    go env -w GONOSUMDB=git.qingteng.cn/* && \
-    go env -w GOPRIVATE=git.qingteng.cn && \
-    go env -w GONOPROXY=abc
-
 COPY go.mod ./
 RUN go mod download
 
